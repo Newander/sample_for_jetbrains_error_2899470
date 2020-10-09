@@ -15,16 +15,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     unixodbc-dev \
     locales \
-    libaio1 \
-    libaio-dev \
     unzip
-
-# Creates Oracle
-RUN mkdir -p /opt/oracle/instantclient
-COPY ./libs/lib* /opt/oracle/instantclient/
-
-RUN sh -c "echo /opt/oracle/instantclient > /etc/ld.so.conf.d/oracle-instantclient.conf"
-RUN ldconfig
 
 RUN pip install -r ${AIRFLOW_HOME}/dags/requirements.txt
 RUN rm -rf /usr/local/bin/python3.7/site-packages/airflow/example_dags
