@@ -1,0 +1,6 @@
+# Airflow
+apache-airflow[celery,postgres,crypto,password,statsd,ssh,oracle]==1.10.7
+
+
+# Debug
+ipython==7.3.0
