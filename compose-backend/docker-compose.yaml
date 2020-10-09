@@ -1,0 +1,130 @@
+version: "3.7"
+
+services:
+  # AUXILIARIES
+  redis:
+    image: 'redis:4.0.11'
+    restart: on-failure
+    command: redis-server --requirepass very_complex_pass
+    ports:
+      - 7373:6379
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "6m"
+        max-file: "4"
+
+  postgres:
+    image: postgres:12.1
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "6m"
+        max-file: "4"
+    ports:
+      - 5432:5432
+    volumes:
+      - /volumes/postgres_airflow:/var/lib/postgresql/data
+
+  # AIRFLOW
+  webserver:
+    build:
+      context: ../
+      dockerfile: ../Dockerfile
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "6m"
+        max-file: "4"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ../dags:/usr/local/airflow/dags
+      - ./airflow.cfg:/usr/local/airflow/airflow.cfg
+    environment:
+      - AIRFLOW__WEBSERVER__RBAC=true
+      - FERNET_KEY
+      - EXECUTOR=Celery
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - REDIS_PASSWORD=very_complex_pass
+      - LOAD_EX=n
+      - AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL=10
+    ports:
+      - 8080:8080
+    command: webserver
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  scheduler:
+    build:
+      context: ../
+      dockerfile: ../Dockerfile
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "6m"
+        max-file: "4"
+    links:
+      - postgres
+      - redis
+    volumes:
+      - ../dags:/usr/local/airflow/dags
+      - ./airflow.cfg:/usr/local/airflow/airflow.cfg
+    environment:
+      - FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+      - EXECUTOR=Celery
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - REDIS_PASSWORD=very_complex_pass
+      - LOAD_EX=n
+      - AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL=10
+    command: scheduler
+
+  worker:
+    build:
+      context: ../
+      dockerfile: ../Dockerfile
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "6m"
+        max-file: "4"
+    links:
+      - postgres
+      - redis
+    volumes:
+      - ../dags:/usr/local/airflow/dags
+      - ./airflow.cfg:/usr/local/airflow/airflow.cfg
+    environment:
+      - FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+      - EXECUTOR=Celery
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - REDIS_PASSWORD=very_complex_pass
+      - LOAD_EX=n
+      - AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL=10
+    command: airflow worker
